@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>登録医・医療機関の紹介</title>
+    <script src="assets/js/jquery-2.1.4.min.js"></script>
+    <!-- デプロイ時にキャッシュバスティングのためバージョンを更新する -->
+    <script src="assets/js/signage.js?v=20250630"></script>
+    <link href="assets/css/signage.css?v=20250630" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="back"></div>
+    <div id="wrapper">
+      <div id="item-wrapper">
+        <div class="item">
+          <div class="header">
+            <div class="hpGroup"><span id="corp"></span></div>
+            <div class="hpName"><span id="name"></span></div>
+          </div>
+          <div class="hpImage">
+            <div id="image1"></div>
+            <div id="image2"></div>
+          </div>
+          <div class="hpAddress">
+            <table>
+              <tr>
+                <th>住　　所</th>
+                <td><span id="address"></span></td>
+              </tr>
+            </table>
+          </div>
+          <div class="hpSubject" id="serviceContainer">
+            <table>
+              <tr>
+                <th>診療科目</th>
+                <td><span id="service"></span></td>
+              </tr>
+            </table>
+          </div>
+          <div class="hpFeature" id="prContainer">
+            <table>
+              <tr>
+                <th>特　　徴</th>
+                <td><span id="pr"></span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <!--/.item-->
+      </div>
+      <!--/#item-wrapper-->
+      <div class="guide">医療機関の紹介</div>
+    </div>
+    <!--/#wrapper-->
+    <div
+      id="loader"
+      style="position: fixed; left: 5px; top: 5px; width: 60px; height: 60px; background-image: url('assets/img/loader.gif')"
+    ></div>
+  </body>
+</html>

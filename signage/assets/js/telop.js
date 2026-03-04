@@ -1,0 +1,105 @@
+﻿var customerCD;
+var telopData = [];
+var maxIndex;
+var curtIndex;
+var $mq;
+
+window.onload = function () {
+  customerCD = getCustomerCD();
+  if (customerCD.length != 0) {
+    $mq = $("#marquee");
+    getTelopData();
+  } else {
+    showMessage("パラメーターが正しくありません。");
+  }
+}
+
+function getCustomerCD() {
+  var p1 = location.href.split("?");
+  if (p1.length == 2) {
+    var p2 = p1[1].split("=");
+    if (p2.length == 2) {
+      if (p2[0] == "cd") {
+        if (/^h\d{9}$/.test(p2[1])) {
+          return p2[1];
+        } else {
+          return "";
+        }
+      } else {
+        return "";
+      }
+    } else {
+      return "";
+    }
+  } else {
+    return "";
+  }
+}
+
+function getTelopData() {
+  $.ajax({
+    ifModified: true,
+    cache: true,
+    type: "get",
+    dataType: "jsonp",
+    url: "/" + customerCD + "/api/signagetelopinfo"
+  }).done(function (data, textStatus, jqXHR) {
+    if (jqXHR.status == 200) {
+      var obj = JSON.parse(data);
+      if (Array.isArray(obj)) {
+        var tmp = [];
+        for (var i = 0, len = obj.length; i < len; i++) {
+          if (obj[i].trim().length > 0) {
+            tmp.push(obj[i]);
+          }
+        }
+        if (tmp.length > 0) {
+          $mq
+            .marquee("destroy")
+            .text("");
+          telopData = tmp;
+          maxIndex = telopData.length - 1;
+          curtIndex = 0;
+          showMarquee();
+        } else {
+          showMessage("配列内に要素が存在しません。");
+        }
+      } else {
+        showMessage("オブジェクトが配列ではありません。");
+      }
+    } else {
+      console.warn("Ajax communication status other than 200. [" + textStatus + ", " + jqXHR.status + "]")
+    }
+  }).fail(function (jqXHR, textStatus, errorThrown) {
+    console.error("Ajax communication failed. [" + textStatus + ", " + jqXHR.status + ", " + errorThrown + "]");
+  }).always(function () {
+  });
+}
+
+function showMarquee() {
+  if (curtIndex > maxIndex) {
+    curtIndex = 0;
+    getTelopData();
+  }
+  $mq
+    .marquee("destroy")
+    .text(telopData[curtIndex])
+    .bind("finished", showMarquee)
+    .marquee({
+      duration: 10000,
+      delayBeforeStart: 1000
+    });
+  curtIndex++;
+}
+
+function showMessage(message) {
+  var elem = document.createElement("div");
+  elem.style.position = "fixed";
+  elem.style.left = "5px";
+  elem.style.top = "5px";
+  elem.style.backgroundColor = "#f00";
+  elem.style.border = "solid 1px #fff";
+  elem.style.padding = "5px";
+  elem.innerHTML = message;
+  document.body.appendChild(elem);
+}
