@@ -82,11 +82,11 @@
     }
   }
 
-  function shuffleAndRepeat(data, count) {
-    const shuffled = [...data];
-    shuffleArray(shuffled);
+  function shuffleAndRepeat(data, count, doShuffle) {
+    const arr = [...data];
+    if (doShuffle) shuffleArray(arr);
     for (let i = 0; i < count; i++) {
-      state.facilityData.push(...shuffled);
+      state.facilityData.push(...arr);
     }
   }
 
@@ -250,10 +250,11 @@
       return;
     }
 
-    // pattern未指定 → frequency適用（事前シャッフル）
-    shuffleAndRepeat(dataA, controlInfo.displayFrequencyA);
-    shuffleAndRepeat(dataB, controlInfo.displayFrequencyB);
-    shuffleAndRepeat(dataC, controlInfo.displayFrequencyC);
+    // pattern未指定 → frequency適用
+    const doShuffle = queryParameter.mode !== 0;
+    shuffleAndRepeat(dataA, controlInfo.displayFrequencyA, doShuffle);
+    shuffleAndRepeat(dataB, controlInfo.displayFrequencyB, doShuffle);
+    shuffleAndRepeat(dataC, controlInfo.displayFrequencyC, doShuffle);
   }
 
   // ==============================
