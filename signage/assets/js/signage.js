@@ -82,6 +82,14 @@
     }
   }
 
+  function shuffleAndRepeat(data, count) {
+    const shuffled = [...data];
+    shuffleArray(shuffled);
+    for (let i = 0; i < count; i++) {
+      state.facilityData.push(...shuffled);
+    }
+  }
+
   function checkImageExists(url, callback) {
     const img = new Image();
     img.onload = () => callback(true);
@@ -91,10 +99,8 @@
 
   function setFontSize(elem, maxWidth, maxHeight, minFont, maxFont) {
     if (!elem.textContent.trim()) return;
-
     for (let size = minFont; size <= maxFont; size++) {
       elem.style.fontSize = `${size}px`;
-
       if (elem.offsetWidth > maxWidth || elem.offsetHeight > maxHeight) {
         elem.style.fontSize = `${size - 1}px`;
         break;
@@ -104,7 +110,6 @@
 
   function showMessage(message) {
     elements.loader.style.display = "none";
-
     const div = document.createElement("div");
     div.style.position = "fixed";
     div.style.left = "5px";
@@ -113,7 +118,6 @@
     div.style.border = "solid 1px #fff";
     div.style.padding = "5px";
     div.innerHTML = message;
-
     document.body.appendChild(div);
   }
 
@@ -132,9 +136,7 @@
     const queryString = location.search.substring(1);
     if (!queryString) return result;
 
-    const params = queryString.split("&");
-
-    params.forEach((p) => {
+    queryString.split("&").forEach((p) => {
       const [key, value] = p.split("=");
       if (!value) return;
 
@@ -142,17 +144,14 @@
         case "cd":
           if (/^h\d{9}$/.test(value)) result.cd = value;
           break;
-
         case "dur":
           if (/^([1-9][0-9]{0,2})$/.test(value))
             result.dur = Number(value) * 1000;
           break;
-
         case "pattern":
           if (/^[ABC]$/.test(value))
             result.pattern = value;
           break;
-
         case "mode":
           if (/^[012]$/.test(value))
             result.mode = Number(value);
@@ -182,7 +181,6 @@
 
   function init() {
     clearInterval(state.intervalId);
-
     const requests = createAjaxRequests(queryParameter.cd);
 
     $.when.apply($, requests)
@@ -222,7 +220,6 @@
   function handleAjaxFailure(jqXHR, textStatus) {
     if (ajaxState.retryCount < MAX_RETRY) {
       ajaxState.retryCount++;
-
       ajaxState.messageLog += `
         ${new Date()}<br>
         Ajax communication failed. Retry=${ajaxState.retryCount}/${MAX_RETRY}<br>
@@ -230,7 +227,6 @@
         Code:&thinsp;${jqXHR.status}<br>
         Description:&thinsp;${jqXHR.statusText}<br><br>
       `;
-
       setTimeout(init, RETRY_INTERVAL);
     } else {
       showMessage(ajaxState.messageLog);
@@ -246,20 +242,18 @@
 
     const p = queryParameter.pattern;
 
-    if (!p || p === "A")
-      repeatAddData(dataA, controlInfo.displayFrequencyA);
-
-    if (!p || p === "B")
-      repeatAddData(dataB, controlInfo.displayFrequencyB);
-
-    if (!p || p === "C")
-      repeatAddData(dataC, controlInfo.displayFrequencyC);
-  }
-
-  function repeatAddData(data, count) {
-    for (let i = 0; i < count; i++) {
-      state.facilityData.push(...data);
+    // pattern指定あり → frequency無視
+    if (p) {
+      if (p === "A") state.facilityData = [...dataA];
+      if (p === "B") state.facilityData = [...dataB];
+      if (p === "C") state.facilityData = [...dataC];
+      return;
     }
+
+    // pattern未指定 → frequency適用（事前シャッフル）
+    shuffleAndRepeat(dataA, controlInfo.displayFrequencyA);
+    shuffleAndRepeat(dataB, controlInfo.displayFrequencyB);
+    shuffleAndRepeat(dataC, controlInfo.displayFrequencyC);
   }
 
   // ==============================
@@ -268,7 +262,6 @@
 
   function startDisplay(controlInfo) {
     elements.loader.style.display = "none";
-
     document.documentElement.style.backgroundColor =
       controlInfo.backgroundColor;
     document.body.style.backgroundColor =
@@ -284,27 +277,19 @@
 
   function showData() {
     const data = state.facilityData[state.currentIndex];
-
     renderText(data);
     renderPR(data);
     renderImages(data);
-
     updateIndex();
-
     $("#wrapper").fadeTo(1000, 1);
   }
 
   function updateIndex() {
-
     if (queryParameter.mode === 0 || queryParameter.mode === 1) {
-
       state.currentIndex =
         (state.currentIndex + 1) % (state.lastIndex + 1);
-
     } else if (queryParameter.mode === 2) {
-
       state.currentIndex++;
-
       if (state.currentIndex > state.lastIndex) {
         shuffleArray(state.facilityData);
         state.currentIndex = 0;
