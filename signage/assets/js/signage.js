@@ -75,6 +75,13 @@
     return `${url}${separator}v=${timestamp}`;
   }
 
+  function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
+
   function checkImageExists(url, callback) {
     const img = new Image();
     img.onload = () => callback(true);
@@ -119,7 +126,7 @@
       cd: null,
       dur: 15000,
       pattern: null, // A | B | C | null
-      order: 0,      // 0=sequential, 1=random
+      mode: 0, // 0=順番表示,1=初回のみシャッフル,2=1周ごとに再シャッフル
     };
 
     const queryString = location.search.substring(1);
@@ -146,9 +153,9 @@
             result.pattern = value;
           break;
 
-        case "order":
-          if (/^[01]$/.test(value))
-            result.order = Number(value);
+        case "mode":
+          if (/^[012]$/.test(value))
+            result.mode = Number(value);
           break;
       }
     });
@@ -200,7 +207,13 @@
     state.lastIndex = state.facilityData.length - 1;
 
     if (state.lastIndex >= 0) {
+
+      if (queryParameter.mode === 1 || queryParameter.mode === 2) {
+        shuffleArray(state.facilityData);
+      }
+
       startDisplay(controlInfo);
+
     } else {
       showMessage("表示するデータがありません。");
     }
@@ -282,13 +295,21 @@
   }
 
   function updateIndex() {
-    if (queryParameter.order === 1) {
-      state.currentIndex = Math.floor(
-        Math.random() * (state.lastIndex + 1)
-      );
-    } else {
+
+    if (queryParameter.mode === 0 || queryParameter.mode === 1) {
+
       state.currentIndex =
         (state.currentIndex + 1) % (state.lastIndex + 1);
+
+    } else if (queryParameter.mode === 2) {
+
+      state.currentIndex++;
+
+      if (state.currentIndex > state.lastIndex) {
+        shuffleArray(state.facilityData);
+        state.currentIndex = 0;
+      }
+
     }
   }
 
