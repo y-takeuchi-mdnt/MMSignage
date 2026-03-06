@@ -147,7 +147,7 @@
     const result = {
       cd: null,          // 施設コード（例: h139999996）
       dur: 15000,        // 1施設あたりの表示時間（ミリ秒）。クエリは秒単位で指定
-      pattern: null,     // 表示グループ絞り込み: A | B | C | null（null=全グループ）
+      group: null,       // 表示グループ絞り込み: A | B | C | null（null=全グループ）
       mode: 0,           // 表示順モード: 0=順番, 1=初回のみシャッフル, 2=1周ごとに再シャッフル
     };
 
@@ -168,9 +168,9 @@
           if (/^([1-9][0-9]{0,2})$/.test(value))
             result.dur = Number(value) * 1000;
           break;
-        case "pattern":
+        case "group":
           if (/^[ABC]$/.test(value))
-            result.pattern = value;
+            result.group = value;
           break;
         case "mode":
           if (/^[012]$/.test(value))
@@ -257,21 +257,21 @@
     state.facilityData = [];
     state.groups = [];
 
-    const pattern = queryParameter.pattern;
+    const group = queryParameter.group;
 
     // mode=1,2 のときはグループ内をシャッフルする（グループ間の順序は変えない）
     const doShuffle = queryParameter.mode !== 0;
 
-    // pattern指定あり → 該当グループのみ対象とする
-    // pattern未指定 → グループ A/B/C を順に結合し、表示頻度に応じて繰り返す
+    // group指定あり → 該当グループのみ対象とする
+    // group未指定 → グループ A/B/C を順に結合し、表示頻度に応じて繰り返す
     const allGroupDefs = [
       { facilities: facilitiesA, freq: controlInfo.displayFrequencyA },
       { facilities: facilitiesB, freq: controlInfo.displayFrequencyB },
       { facilities: facilitiesC, freq: controlInfo.displayFrequencyC },
     ];
     const groupMap = { A: allGroupDefs[0], B: allGroupDefs[1], C: allGroupDefs[2] };
-    // pattern指定時は表示頻度を無視して1周のみ
-    const groupDefs = pattern ? [{ ...groupMap[pattern], freq: 1 }] : allGroupDefs;
+    // group指定時は表示頻度を無視して1周のみ
+    const groupDefs = group ? [{ ...groupMap[group], freq: 1 }] : allGroupDefs;
 
     for (const { facilities, freq } of groupDefs) {
       // mode=2 の再シャッフル（shuffleGroups）のために元リストと頻度を保存する
