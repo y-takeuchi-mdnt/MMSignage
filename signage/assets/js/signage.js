@@ -38,7 +38,7 @@
 
   const state = {
     facilityData: [],  // 表示順に並べた施設データの配列
-    groupSizes: [],    // グループ A/B/C それぞれの facilityData 内の要素数
+    groups: [],        // グループごとの元施設リストと表示頻度（mode=2の再シャッフルで使用）
     lastIndex: 0,      // facilityData の最終インデックス
     currentIndex: 0,   // 現在表示中のインデックス
     intervalId: null,  // スライドショーのタイマーID
@@ -87,28 +87,21 @@
     }
   }
 
-  // facilityData 内のグループ A/B/C それぞれをグループ内のみシャッフルする。
+  // facilityData 内のグループ A/B/C それぞれをグループ内のみ再シャッフルして上書きする。
+  // 「元施設リストをシャッフル → freq 回繰り返し」の順で再構築するため、
+  // フラット配列をそのままシャッフルすることによる重複の偏りが生じない。
   // グループをまたいだ順序の入れ替えは行わない。
   function shuffleGroups() {
     let offset = 0;
-    for (const size of state.groupSizes) {
-      if (size > 0) {
-        const slice = state.facilityData.slice(offset, offset + size);
-        shuffleArray(slice);
-        state.facilityData.splice(offset, size, ...slice);
-        offset += size;
+    for (const { facilities, freq } of state.groups) {
+      const shuffled = [...facilities];
+      shuffleArray(shuffled);
+      const repeated = [];
+      for (let i = 0; i < freq; i++) {
+        repeated.push(...shuffled);
       }
-    }
-  }
-
-  // 施設リストをシャッフル（任意）してから、表示頻度の回数分 facilityData に追加する。
-  // displayFrequency: 表示頻度設定（1〜3）。値が大きいほど表示回数が多くなる。
-  // シャッフルは1回だけ行い、同じ順序で displayFrequency 回繰り返し追加する。
-  function appendFacilitiesWithFrequency(facilities, displayFrequency, doShuffle) {
-    const shuffled = [...facilities];
-    if (doShuffle) shuffleArray(shuffled);
-    for (let i = 0; i < displayFrequency; i++) {
-      state.facilityData.push(...shuffled);
+      state.facilityData.splice(offset, repeated.length, ...repeated);
+      offset += repeated.length;
     }
   }
 
@@ -262,7 +255,7 @@
 
   function buildFacilityData(controlInfo, facilitiesA, facilitiesB, facilitiesC) {
     state.facilityData = [];
-    state.groupSizes = [];
+    state.groups = [];
 
     const pattern = queryParameter.pattern;
 
@@ -278,19 +271,23 @@
     // mode=1,2 のときはグループ内をシャッフルする（グループ間の順序は変えない）
     const doShuffle = queryParameter.mode !== 0;
 
-    // 追加前後の長さの差でグループごとの要素数を記録する（shuffleGroups で使用）
-    let before;
-    before = state.facilityData.length;
-    appendFacilitiesWithFrequency(facilitiesA, controlInfo.displayFrequencyA, doShuffle);
-    state.groupSizes.push(state.facilityData.length - before);
+    const groupDefs = [
+      { facilities: facilitiesA, freq: controlInfo.displayFrequencyA },
+      { facilities: facilitiesB, freq: controlInfo.displayFrequencyB },
+      { facilities: facilitiesC, freq: controlInfo.displayFrequencyC },
+    ];
 
-    before = state.facilityData.length;
-    appendFacilitiesWithFrequency(facilitiesB, controlInfo.displayFrequencyB, doShuffle);
-    state.groupSizes.push(state.facilityData.length - before);
+    for (const { facilities, freq } of groupDefs) {
+      // mode=2 の再シャッフル（shuffleGroups）のために元リストと頻度を保存する
+      state.groups.push({ facilities: [...facilities], freq });
 
-    before = state.facilityData.length;
-    appendFacilitiesWithFrequency(facilitiesC, controlInfo.displayFrequencyC, doShuffle);
-    state.groupSizes.push(state.facilityData.length - before);
+      // 初回表示用: シャッフル（任意）してから freq 回繰り返して追加する
+      const shuffled = [...facilities];
+      if (doShuffle) shuffleArray(shuffled);
+      for (let i = 0; i < freq; i++) {
+        state.facilityData.push(...shuffled);
+      }
+    }
   }
 
   // ==============================
