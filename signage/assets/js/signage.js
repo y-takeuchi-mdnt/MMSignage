@@ -7,6 +7,7 @@
 
   const mapEnabled = false;
 
+  // APIエンドポイント一覧（取得順に $.when へ渡す）
   const ACTION_URLS = [
     "signagecontrolinfo",
     "signagefacilityinfo?display_frequency=A",
@@ -14,37 +15,38 @@
     "signagefacilityinfo?display_frequency=C",
   ];
 
+  // 施設データ（配列）の各フィールドに対応するインデックス
   const DATA_INDEX = {
-    CORP: 0,
-    NAME: 1,
-    ADDRESS: 2,
-    SERVICE: 3,
-    PR: 4,
-    IMAGE1: 5,
-    IMAGE2: 6,
-    LAT: 7,
-    LON: 8,
+    CORP: 0,      // 法人名
+    NAME: 1,      // 施設名
+    ADDRESS: 2,   // 住所
+    SERVICE: 3,   // 診療科目
+    PR: 4,        // PRテキスト
+    IMAGE1: 5,    // 画像URL1
+    IMAGE2: 6,    // 画像URL2
+    LAT: 7,       // 緯度（地図表示用）
+    LON: 8,       // 経度（地図表示用）
   };
 
-  const MAX_RETRY = 6;
-  const RETRY_INTERVAL = 10000;
-  const AJAX_TIMEOUT = 60000;
+  const MAX_RETRY = 6;           // Ajax失敗時の最大リトライ回数
+  const RETRY_INTERVAL = 10000;  // リトライ間隔（ミリ秒）
+  const AJAX_TIMEOUT = 60000;    // Ajaxタイムアウト（ミリ秒）
 
   // ==============================
   // 状態管理
   // ==============================
 
   const state = {
-    facilityData: [],
-    groupSizes: [],
-    lastIndex: 0,
-    currentIndex: 0,
-    intervalId: null,
+    facilityData: [],  // 表示順に並べた施設データの配列
+    groupSizes: [],    // グループ A/B/C それぞれの facilityData 内の要素数
+    lastIndex: 0,      // facilityData の最終インデックス
+    currentIndex: 0,   // 現在表示中のインデックス
+    intervalId: null,  // スライドショーのタイマーID
   };
 
   const ajaxState = {
-    retryCount: 0,
-    messageLog: "",
+    retryCount: 0,  // 現在のリトライ回数
+    messageLog: "", // エラーメッセージの蓄積ログ
   };
 
   // ==============================
@@ -70,12 +72,14 @@
   // 共通ユーティリティ
   // ==============================
 
+  // ブラウザキャッシュを防ぐため、URLに1分単位のタイムスタンプを付加する
   function addCacheBusting(url) {
     const separator = url.includes("?") ? "&" : "?";
     const timestamp = Math.floor(Date.now() / 60000);
     return `${url}${separator}v=${timestamp}`;
   }
 
+  // Fisher-Yates アルゴリズムで配列をインプレースにシャッフルする
   function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -83,6 +87,8 @@
     }
   }
 
+  // facilityData 内のグループ A/B/C それぞれをグループ内のみシャッフルする。
+  // グループをまたいだ順序の入れ替えは行わない。
   function shuffleGroups() {
     let offset = 0;
     for (const size of state.groupSizes) {
@@ -97,6 +103,7 @@
 
   // 施設リストをシャッフル（任意）してから、表示頻度の回数分 facilityData に追加する。
   // displayFrequency: 表示頻度設定（1〜3）。値が大きいほど表示回数が多くなる。
+  // シャッフルは1回だけ行い、同じ順序で displayFrequency 回繰り返し追加する。
   function appendFacilitiesWithFrequency(facilities, displayFrequency, doShuffle) {
     const shuffled = [...facilities];
     if (doShuffle) shuffleArray(shuffled);
@@ -105,6 +112,7 @@
     }
   }
 
+  // 指定URLの画像が実際に存在するかを非同期で確認し、結果をコールバックで返す
   function checkImageExists(url, callback) {
     const img = new Image();
     img.onload = () => callback(true);
@@ -112,6 +120,7 @@
     img.src = url;
   }
 
+  // テキストがはみ出さない最大フォントサイズを1pxずつ増やして探索し適用する
   function setFontSize(elem, maxWidth, maxHeight, minFont, maxFont) {
     if (!elem.textContent.trim()) return;
     for (let size = minFont; size <= maxFont; size++) {
@@ -123,6 +132,7 @@
     }
   }
 
+  // 画面左上にエラーメッセージを赤背景で表示する
   function showMessage(message) {
     elements.loader.style.display = "none";
     const div = document.createElement("div");
@@ -142,10 +152,10 @@
 
   function parseQueryParameter() {
     const result = {
-      cd: null,
-      dur: 15000,
-      pattern: null, // A | B | C | null
-      mode: 0, // 0=順番表示,1=初回のみシャッフル,2=1周ごとに再シャッフル
+      cd: null,          // 施設コード（例: h139999996）
+      dur: 15000,        // 1施設あたりの表示時間（ミリ秒）。クエリは秒単位で指定
+      pattern: null,     // 表示グループ絞り込み: A | B | C | null（null=全グループ）
+      mode: 0,           // 表示順モード: 0=順番, 1=初回のみシャッフル, 2=1周ごとに再シャッフル
     };
 
     const queryString = location.search.substring(1);
@@ -157,9 +167,11 @@
 
       switch (key) {
         case "cd":
+          // 形式チェック: h + 9桁の数字
           if (/^h\d{9}$/.test(value)) result.cd = value;
           break;
         case "dur":
+          // 1〜999秒の範囲のみ受け付け、ミリ秒に変換して保持
           if (/^([1-9][0-9]{0,2})$/.test(value))
             result.dur = Number(value) * 1000;
           break;
@@ -198,6 +210,7 @@
     clearInterval(state.intervalId);
     const requests = createAjaxRequests(queryParameter.cd);
 
+    // 全リクエストが揃ってから処理を開始する
     $.when.apply($, requests)
       .done((controlInfoRes, groupARes, groupBRes, groupCRes) =>
         handleAjaxSuccess(controlInfoRes, groupARes, groupBRes, groupCRes)
@@ -210,6 +223,7 @@
   // ==============================
 
   function handleAjaxSuccess(controlInfoRes, groupARes, groupBRes, groupCRes) {
+    // jQueryの $.when は各レスポンスを [data, textStatus, jqXHR] の配列で渡すため [0] で本体を取り出す
     const controlInfo = JSON.parse(controlInfoRes[0]);
     const facilitiesA = JSON.parse(groupARes[0]);
     const facilitiesB = JSON.parse(groupBRes[0]);
@@ -220,9 +234,7 @@
     state.lastIndex = state.facilityData.length - 1;
 
     if (state.lastIndex >= 0) {
-
       startDisplay(controlInfo);
-
     } else {
       showMessage("表示するデータがありません。");
     }
@@ -254,7 +266,7 @@
 
     const pattern = queryParameter.pattern;
 
-    // pattern指定あり → frequency無視
+    // pattern指定あり → 該当グループのみ表示（表示頻度・シャッフルは適用しない）
     if (pattern) {
       if (pattern === "A") state.facilityData = [...facilitiesA];
       if (pattern === "B") state.facilityData = [...facilitiesB];
@@ -262,9 +274,11 @@
       return;
     }
 
-    // pattern未指定 → frequency適用
+    // pattern未指定 → グループ A/B/C を順に結合し、表示頻度に応じて繰り返す
+    // mode=1,2 のときはグループ内をシャッフルする（グループ間の順序は変えない）
     const doShuffle = queryParameter.mode !== 0;
 
+    // 追加前後の長さの差でグループごとの要素数を記録する（shuffleGroups で使用）
     let before;
     before = state.facilityData.length;
     appendFacilitiesWithFrequency(facilitiesA, controlInfo.displayFrequencyA, doShuffle);
@@ -293,6 +307,7 @@
     state.currentIndex = 0;
     showData();
 
+    // dur ミリ秒ごとにフェードアウト → showData → フェードインを繰り返す
     state.intervalId = setInterval(() => {
       $("#wrapper").fadeTo(1000, 0, showData);
     }, queryParameter.dur);
@@ -309,15 +324,16 @@
 
   function updateIndex() {
     if (queryParameter.mode === 0 || queryParameter.mode === 1) {
+      // mode=0,1: 末尾まで来たら先頭に戻る（ループ）
       state.currentIndex =
         (state.currentIndex + 1) % (state.lastIndex + 1);
     } else if (queryParameter.mode === 2) {
+      // mode=2: 末尾まで来たらグループ内を再シャッフルして先頭に戻る
       state.currentIndex++;
       if (state.currentIndex > state.lastIndex) {
         shuffleGroups();
         state.currentIndex = 0;
       }
-
     }
   }
 
@@ -336,6 +352,7 @@
     const prText = data[DATA_INDEX.PR];
 
     if (!prText) {
+      // PRテキストがない場合: PRエリアを非表示にし、診療科目が広い領域を使えるようにする
       elements.prContainer.style.visibility = "hidden";
 
       if (elements.serviceContainer.offsetHeight > 450) {
@@ -380,6 +397,7 @@
 
   function renderNoImage(data) {
     if (!mapEnabled) {
+      // 施設コード固有のNO IMAGE画像を優先表示し、なければ共通画像を使う
       const backgroundImage =
         `/assets/img/noimage_${queryParameter.cd}.png`;
 
@@ -392,6 +410,7 @@
         elements.image1.style.backgroundColor = "transparent";
       });
     } else {
+      // 地図モード: Yahoo Static Map API で施設位置の地図画像を表示する
       const lat = data[DATA_INDEX.LAT];
       const lon = data[DATA_INDEX.LON];
 
