@@ -270,7 +270,8 @@
       { facilities: facilitiesC, freq: controlInfo.displayFrequencyC },
     ];
     const groupMap = { A: allGroupDefs[0], B: allGroupDefs[1], C: allGroupDefs[2] };
-    const groupDefs = pattern ? [groupMap[pattern]] : allGroupDefs;
+    // pattern指定時は表示頻度を無視して1周のみ
+    const groupDefs = pattern ? [{ ...groupMap[pattern], freq: 1 }] : allGroupDefs;
 
     for (const { facilities, freq } of groupDefs) {
       // mode=2 の再シャッフル（shuffleGroups）のために元リストと頻度を保存する
