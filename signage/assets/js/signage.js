@@ -259,23 +259,18 @@
 
     const pattern = queryParameter.pattern;
 
-    // pattern指定あり → 該当グループのみ表示（表示頻度・シャッフルは適用しない）
-    if (pattern) {
-      if (pattern === "A") state.facilityData = [...facilitiesA];
-      if (pattern === "B") state.facilityData = [...facilitiesB];
-      if (pattern === "C") state.facilityData = [...facilitiesC];
-      return;
-    }
-
-    // pattern未指定 → グループ A/B/C を順に結合し、表示頻度に応じて繰り返す
     // mode=1,2 のときはグループ内をシャッフルする（グループ間の順序は変えない）
     const doShuffle = queryParameter.mode !== 0;
 
-    const groupDefs = [
+    // pattern指定あり → 該当グループのみ対象とする
+    // pattern未指定 → グループ A/B/C を順に結合し、表示頻度に応じて繰り返す
+    const allGroupDefs = [
       { facilities: facilitiesA, freq: controlInfo.displayFrequencyA },
       { facilities: facilitiesB, freq: controlInfo.displayFrequencyB },
       { facilities: facilitiesC, freq: controlInfo.displayFrequencyC },
     ];
+    const groupMap = { A: allGroupDefs[0], B: allGroupDefs[1], C: allGroupDefs[2] };
+    const groupDefs = pattern ? [groupMap[pattern]] : allGroupDefs;
 
     for (const { facilities, freq } of groupDefs) {
       // mode=2 の再シャッフル（shuffleGroups）のために元リストと頻度を保存する
