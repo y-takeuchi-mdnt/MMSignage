@@ -95,11 +95,13 @@
     }
   }
 
-  function shuffleAndRepeat(data, count, doShuffle) {
-    const arr = [...data];
-    if (doShuffle) shuffleArray(arr);
-    for (let i = 0; i < count; i++) {
-      state.facilityData.push(...arr);
+  // 施設リストをシャッフル（任意）してから、表示頻度の回数分 facilityData に追加する。
+  // displayFrequency: 表示頻度設定（1〜3）。値が大きいほど表示回数が多くなる。
+  function appendFacilitiesWithFrequency(facilities, displayFrequency, doShuffle) {
+    const shuffled = [...facilities];
+    if (doShuffle) shuffleArray(shuffled);
+    for (let i = 0; i < displayFrequency; i++) {
+      state.facilityData.push(...shuffled);
     }
   }
 
@@ -265,15 +267,15 @@
 
     let before;
     before = state.facilityData.length;
-    shuffleAndRepeat(dataA, controlInfo.displayFrequencyA, doShuffle);
+    appendFacilitiesWithFrequency(dataA, controlInfo.displayFrequencyA, doShuffle);
     state.groupSizes.push(state.facilityData.length - before);
 
     before = state.facilityData.length;
-    shuffleAndRepeat(dataB, controlInfo.displayFrequencyB, doShuffle);
+    appendFacilitiesWithFrequency(dataB, controlInfo.displayFrequencyB, doShuffle);
     state.groupSizes.push(state.facilityData.length - before);
 
     before = state.facilityData.length;
-    shuffleAndRepeat(dataC, controlInfo.displayFrequencyC, doShuffle);
+    appendFacilitiesWithFrequency(dataC, controlInfo.displayFrequencyC, doShuffle);
     state.groupSizes.push(state.facilityData.length - before);
   }
 
