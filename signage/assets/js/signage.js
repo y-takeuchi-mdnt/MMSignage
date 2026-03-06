@@ -36,6 +36,7 @@
 
   const state = {
     facilityData: [],
+    groupSizes: [],
     lastIndex: 0,
     currentIndex: 0,
     intervalId: null,
@@ -79,6 +80,18 @@
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
+
+  function shuffleGroups() {
+    let offset = 0;
+    for (const size of state.groupSizes) {
+      if (size > 0) {
+        const slice = state.facilityData.slice(offset, offset + size);
+        shuffleArray(slice);
+        state.facilityData.splice(offset, size, ...slice);
+        offset += size;
+      }
     }
   }
 
@@ -206,10 +219,6 @@
 
     if (state.lastIndex >= 0) {
 
-      if (queryParameter.mode === 1 || queryParameter.mode === 2) {
-        shuffleArray(state.facilityData);
-      }
-
       startDisplay(controlInfo);
 
     } else {
@@ -239,6 +248,7 @@
 
   function buildFacilityData(controlInfo, dataA, dataB, dataC) {
     state.facilityData = [];
+    state.groupSizes = [];
 
     const p = queryParameter.pattern;
 
@@ -252,9 +262,19 @@
 
     // pattern未指定 → frequency適用
     const doShuffle = queryParameter.mode !== 0;
+
+    let before;
+    before = state.facilityData.length;
     shuffleAndRepeat(dataA, controlInfo.displayFrequencyA, doShuffle);
+    state.groupSizes.push(state.facilityData.length - before);
+
+    before = state.facilityData.length;
     shuffleAndRepeat(dataB, controlInfo.displayFrequencyB, doShuffle);
+    state.groupSizes.push(state.facilityData.length - before);
+
+    before = state.facilityData.length;
     shuffleAndRepeat(dataC, controlInfo.displayFrequencyC, doShuffle);
+    state.groupSizes.push(state.facilityData.length - before);
   }
 
   // ==============================
@@ -292,7 +312,7 @@
     } else if (queryParameter.mode === 2) {
       state.currentIndex++;
       if (state.currentIndex > state.lastIndex) {
-        shuffleArray(state.facilityData);
+        shuffleGroups();
         state.currentIndex = 0;
       }
 
