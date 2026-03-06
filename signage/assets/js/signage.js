@@ -151,8 +151,8 @@
     const queryString = location.search.substring(1);
     if (!queryString) return result;
 
-    queryString.split("&").forEach((p) => {
-      const [key, value] = p.split("=");
+    queryString.split("&").forEach((param) => {
+      const [key, value] = param.split("=");
       if (!value) return;
 
       switch (key) {
@@ -199,8 +199,8 @@
     const requests = createAjaxRequests(queryParameter.cd);
 
     $.when.apply($, requests)
-      .done((sci, freqA, freqB, freqC) =>
-        handleAjaxSuccess(sci, freqA, freqB, freqC)
+      .done((controlInfoRes, groupARes, groupBRes, groupCRes) =>
+        handleAjaxSuccess(controlInfoRes, groupARes, groupBRes, groupCRes)
       )
       .fail(handleAjaxFailure);
   }
@@ -209,13 +209,13 @@
   // Ajax成功処理
   // ==============================
 
-  function handleAjaxSuccess(sci, freqA, freqB, freqC) {
-    const controlInfo = JSON.parse(sci[0]);
-    const dataA = JSON.parse(freqA[0]);
-    const dataB = JSON.parse(freqB[0]);
-    const dataC = JSON.parse(freqC[0]);
+  function handleAjaxSuccess(controlInfoRes, groupARes, groupBRes, groupCRes) {
+    const controlInfo = JSON.parse(controlInfoRes[0]);
+    const facilitiesA = JSON.parse(groupARes[0]);
+    const facilitiesB = JSON.parse(groupBRes[0]);
+    const facilitiesC = JSON.parse(groupCRes[0]);
 
-    buildFacilityData(controlInfo, dataA, dataB, dataC);
+    buildFacilityData(controlInfo, facilitiesA, facilitiesB, facilitiesC);
 
     state.lastIndex = state.facilityData.length - 1;
 
@@ -248,17 +248,17 @@
   // データ構築
   // ==============================
 
-  function buildFacilityData(controlInfo, dataA, dataB, dataC) {
+  function buildFacilityData(controlInfo, facilitiesA, facilitiesB, facilitiesC) {
     state.facilityData = [];
     state.groupSizes = [];
 
-    const p = queryParameter.pattern;
+    const pattern = queryParameter.pattern;
 
     // pattern指定あり → frequency無視
-    if (p) {
-      if (p === "A") state.facilityData = [...dataA];
-      if (p === "B") state.facilityData = [...dataB];
-      if (p === "C") state.facilityData = [...dataC];
+    if (pattern) {
+      if (pattern === "A") state.facilityData = [...facilitiesA];
+      if (pattern === "B") state.facilityData = [...facilitiesB];
+      if (pattern === "C") state.facilityData = [...facilitiesC];
       return;
     }
 
@@ -267,15 +267,15 @@
 
     let before;
     before = state.facilityData.length;
-    appendFacilitiesWithFrequency(dataA, controlInfo.displayFrequencyA, doShuffle);
+    appendFacilitiesWithFrequency(facilitiesA, controlInfo.displayFrequencyA, doShuffle);
     state.groupSizes.push(state.facilityData.length - before);
 
     before = state.facilityData.length;
-    appendFacilitiesWithFrequency(dataB, controlInfo.displayFrequencyB, doShuffle);
+    appendFacilitiesWithFrequency(facilitiesB, controlInfo.displayFrequencyB, doShuffle);
     state.groupSizes.push(state.facilityData.length - before);
 
     before = state.facilityData.length;
-    appendFacilitiesWithFrequency(dataC, controlInfo.displayFrequencyC, doShuffle);
+    appendFacilitiesWithFrequency(facilitiesC, controlInfo.displayFrequencyC, doShuffle);
     state.groupSizes.push(state.facilityData.length - before);
   }
 
