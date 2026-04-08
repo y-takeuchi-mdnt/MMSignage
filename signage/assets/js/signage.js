@@ -292,10 +292,8 @@
 
   function startDisplay(controlInfo) {
     elements.loader.style.display = "none";
-    document.documentElement.style.backgroundColor =
-      controlInfo.backgroundColor;
-    document.body.style.backgroundColor =
-      controlInfo.backgroundColor;
+    document.documentElement.style.backgroundColor = controlInfo.backgroundColor;
+    document.body.style.backgroundColor = controlInfo.backgroundColor;
 
     state.currentIndex = 0;
     showData();
